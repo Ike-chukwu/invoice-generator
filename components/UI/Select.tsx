@@ -8,7 +8,7 @@ type Props = {
   selectClassName: string;
   options: any;
   label: string;
-  error: string;
+  error: string | undefined;
 };
 
 const SelectField = ({
@@ -19,10 +19,6 @@ const SelectField = ({
   label,
   error,
 }: Props) => {
-
-  
-
-
   return (
     <>
       <label className={labelClassName}>{label}</label>
