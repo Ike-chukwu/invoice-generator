@@ -1,83 +1,87 @@
 import { invoicePayload, invoiceSchema } from "@/types/schema";
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction, useEffect } from "react";
 import { FormProvider, useFieldArray, useForm } from "react-hook-form";
 import InputField from "./UI/Input";
 import SelectField from "./UI/Select";
 import ItemDetail from "./ItemDetail";
 import { listOfCountries, paymentMethods } from "@/constants";
 import { v4 as uuidv4 } from "uuid";
-import { useInvoiceStore } from "@/app/store";
+import { Invoice, useInvoiceStore, useNavStore } from "@/app/store";
 import { addDays, generateCode } from "@/helper";
 
 type FormProps = {
-  isNavActive?: boolean;
-  toggleNav?: Dispatch<SetStateAction<boolean>>;
-  listOfFormData?: Array<{
-    id: string;
-    code: string;
-    itemsList?:
-      | {
-          itemQuantity?: number | undefined;
-          itemPrice?: number | undefined;
-          itemName: string;
-          total: number;
-        }[]
-      | undefined;
-    streetAddressOfBusinessOwner: string;
-    cityOfBusinessOwner: string;
-    postCodeOfBusinessOwner: string;
-    countryOfBusinessOwner: string;
-    clientName: string;
-    clientEmail: string;
-    streetAddressOfClient: string;
-    cityOfClient: string;
-    postCodeOfOfClient: string;
-    countryOfClient: string;
-    invoiceDate: string;
-    paymentTerms: string;
-    projectDescription: string;
-    dueDate: string;
-    status: string;
-  }>;
-  setListOfFormData: Dispatch<
-    SetStateAction<
-      {
-        id: string;
-        code: string;
-        itemsList?:
-          | {
-              itemQuantity?: number | undefined;
-              itemPrice?: number | undefined;
-              itemName: string;
-              total: number;
-            }[]
-          | undefined;
-        streetAddressOfBusinessOwner: string;
-        cityOfBusinessOwner: string;
-        postCodeOfBusinessOwner: string;
-        countryOfBusinessOwner: string;
-        clientName: string;
-        clientEmail: string;
-        streetAddressOfClient: string;
-        cityOfClient: string;
-        postCodeOfOfClient: string;
-        countryOfClient: string;
-        invoiceDate: string;
-        paymentTerms: string;
-        projectDescription: string;
-        dueDate: string;
-        status: string;
-      }[]
-    >
-  >;
+  // isNavActive?: boolean;
+  // toggleNav?: Dispatch<SetStateAction<boolean>>;
+  // listOfFormData?: Array<{
+  //   id: string;
+  //   code: string;
+  //   itemsList?:
+  //     | {
+  //         itemQuantity?: number | undefined;
+  //         itemPrice?: number | undefined;
+  //         itemName: string;
+  //         total: number;
+  //       }[]
+  //     | undefined;
+  //   streetAddressOfBusinessOwner: string;
+  //   cityOfBusinessOwner: string;
+  //   postCodeOfBusinessOwner: string;
+  //   countryOfBusinessOwner: string;
+  //   clientName: string;
+  //   clientEmail: string;
+  //   streetAddressOfClient: string;
+  //   cityOfClient: string;
+  //   postCodeOfOfClient: string;
+  //   countryOfClient: string;
+  //   invoiceDate: string;
+  //   paymentTerms: string;
+  //   projectDescription: string;
+  //   dueDate: string;
+  //   status: string;
+  // }>;
+  // setListOfFormData?: Dispatch<
+  //   SetStateAction<
+  //     {
+  //       id: string;
+  //       code: string;
+  //       itemsList?:
+  //         | {
+  //             itemQuantity?: number | undefined;
+  //             itemPrice?: number | undefined;
+  //             itemName: string;
+  //             total: number;
+  //           }[]
+  //         | undefined;
+  //       streetAddressOfBusinessOwner: string;
+  //       cityOfBusinessOwner: string;
+  //       postCodeOfBusinessOwner: string;
+  //       countryOfBusinessOwner: string;
+  //       clientName: string;
+  //       clientEmail: string;
+  //       streetAddressOfClient: string;
+  //       cityOfClient: string;
+  //       postCodeOfOfClient: string;
+  //       countryOfClient: string;
+  //       invoiceDate: string;
+  //       paymentTerms: string;
+  //       projectDescription: string;
+  //       dueDate: string;
+  //       status: string;
+  //     }[]
+  //   >
+  // >;
+  invoice?: any;
+  submitFormHandler: (invoice: invoicePayload) => void;
 };
 
 const Form = ({
-  isNavActive,
-  toggleNav,
-  listOfFormData,
-  setListOfFormData,
+  // isNavActive,
+  // toggleNav,
+  // listOfFormData,
+  // setListOfFormData,
+  invoice,
+  submitFormHandler,
 }: FormProps) => {
   const methods = useForm({
     resolver: yupResolver(invoiceSchema),
@@ -99,7 +103,9 @@ const Form = ({
       streetAddressOfClient: "",
     },
   });
-
+  const listOfInvoicesFromStore = useInvoiceStore(
+    (state) => state.listOfInvoices
+  );
   const { control, register, watch, reset } = methods;
   const {
     fields: listOfItems,
@@ -114,59 +120,8 @@ const Form = ({
     (state) => state.addInvoice
   );
 
-  const onSubmit = (values: invoicePayload) => {
-    const randomCode = generateCode();
-    const formatedItemsList = values.itemsList?.map((item) => {
-      return {
-        ...item,
-        total: (item.itemPrice ?? 0) * (item.itemQuantity ?? 0),
-      };
-    });
-    let dueDate;
-    const selectedPaymentTerm = values.paymentTerms;
-    if (parseInt(selectedPaymentTerm) === 1) {
-      dueDate = addDays(values.invoiceDate, 1);
-    } else if (parseInt(selectedPaymentTerm) === 2) {
-      dueDate = addDays(values.invoiceDate, 7);
-    } else if (parseInt(selectedPaymentTerm) === 3) {
-      dueDate = addDays(values.invoiceDate, 14);
-    } else if (parseInt(selectedPaymentTerm) === 4) {
-      dueDate = addDays(values.invoiceDate, 21);
-    }
-    if (dueDate) {
-      const date = new Date(dueDate);
-
-      const options: Intl.DateTimeFormatOptions = {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-      };
-      dueDate = date.toLocaleDateString("en-US", options);
-    }
-    addInvoiceHandlerFromStore({
-      id: uuidv4(),
-      code: randomCode,
-      ...values,
-      dueDate,
-      itemsList: formatedItemsList,
-      status: "pending",
-    });
-    
-    setListOfFormData([
-      ...listOfFormData,
-
-      {
-        id: uuidv4(),
-        code: randomCode,
-        ...values,
-        dueDate,
-        itemsList: formatedItemsList,
-        status: "Pending",
-      },
-    ]);
-
-    reset();
-  };
+  const isNavActive = useNavStore((state) => state.isNavActive);
+  const toggleNav = useNavStore((state) => state.toggleNav);
 
   const saveAsDraftHandler = (values: invoicePayload) => {
     const randomCode = generateCode();
@@ -206,6 +161,8 @@ const Form = ({
       itemsList: formatedItemsList,
       status: "draft",
     });
+    toggleNav();
+    reset();
 
     // setListOfFormData([
     //   ...listOfFormData,
@@ -220,13 +177,29 @@ const Form = ({
     //   },
     // ]);
 
-    reset();
+    // reset();
+  };
+
+  useEffect(() => {
+    if (invoice) {
+      methods.reset({
+        ...invoice,
+      });
+    }
+  }, [invoice]);
+
+  const formSubmitHandler = (values: invoicePayload) => {
+    submitFormHandler(values);
+    if (!invoice) {
+      reset();
+    }
+    toggleNav();
   };
 
   return (
     <div
       className={
-        `fixed transition-all ease-in-out z-20  duration-500 e-in-out pl-[1.5rem] pr-[0.5rem] flex flex-col gap-8 md:gap-12 items-start w-full md:w-[720px] top-0 bottom-0 bg-[#FFFFFF] pt-[6rem] md:pt-[7.5rem] lg:pt-14 pb-6 md:pl-[3.3rem] lg:pl-[8.5rem] md:pr-[2rem] rounded-tr-[1.3rem] rounded-br-[1.3rem] ` +
+        `fixed transition-all ease-in-out z-20  duration-500 e-in-out pl-[1.5rem] pr-[0.5rem] flex flex-col gap-8 md:gap-12 items-start w-full md:w-[720px] top-0 bottom-0 bg-[#FFFFFF] pt-[6rem] md:pt-[7.5rem] lg:pt-14 pb-6 md:pl-[3.3rem] lg:pl-[8.5rem] md:pr-[2rem] rounded-tr-[1.3rem] md:rounded-br-[1.3rem] ` +
         (isNavActive ? "left-0" : "left-[-100%]")
       }
     >
@@ -234,7 +207,7 @@ const Form = ({
 
       <FormProvider {...methods}>
         <form
-          onSubmit={methods.handleSubmit(onSubmit)}
+          onSubmit={methods.handleSubmit(formSubmitHandler)}
           className="h-full w-full flex flex-col  gap-[3rem] overflow-y-auto pr-[1rem]  md:pr-[2rem]"
         >
           <div className="flex flex-col gap-[1.6rem] w-full items-start">
@@ -417,24 +390,47 @@ const Form = ({
                     itemQuantity: 0,
                   });
                 }}
-                className="w-full py-3 font-bold rounded-3xl bg-[#DFE3FA] text-[#7E88C3] text-[12px]"
+                className="w-full py-3 font-bold rounded-3xl bg-[#f9fafe] text-[#7E88C3] text-[12px]"
               >
                 + Add new item
               </button>
             </div>
           </div>
-          <div className="flex justify-between w-full items-center">
-            <button className="text-[11px]  p-4  capitalize rounded-3xl text-[#7E88C3] bg-[#DFE3FA]">
-              discard
-            </button>
-            <div className="flex gap-2">
+          <div
+            className={`flex w-full items-center ${
+              invoice ? "justify-end" : "justify-between"
+            }`}
+          >
+            {!invoice && (
               <button
-                onClick={methods.handleSubmit(saveAsDraftHandler)}
-                type="submit"
-                className="text-[11px] p-4 capitalize rounded-3xl bg-[#0C0E16] font-bold text-white"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleNav();
+                }}
+                className="text-[11px] self-start  p-4  capitalize rounded-3xl text-[#7E88C3] bg-[#f9fafe]"
               >
-                save as draft
+                discard
               </button>
+            )}
+            <div className="flex self-end gap-2">
+              {!invoice && (
+                <button
+                  onClick={methods.handleSubmit(saveAsDraftHandler)}
+                  type="submit"
+                  className="text-[11px] p-4 capitalize rounded-3xl bg-[#0C0E16] font-bold text-white"
+                >
+                  save as draft
+                </button>
+              )}
+              {invoice && (
+                <button
+                  // onClick={methods.handleSubmit(saveAsDraftHandler)}
+                  type="submit"
+                  className="text-[11px] p-4 capitalize rounded-3xl bg-[#f9fafe] font-bold text-[#7E88C3]"
+                >
+                  cancel
+                </button>
+              )}
               <button
                 type="submit"
                 className="text-[11px] capitalize  p-4 rounded-3xl font-bold bg-[#9277FF] text-white"

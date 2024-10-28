@@ -1,3 +1,6 @@
+import axios from "axios";
+import { getAccessToken, getRefreshToken, useAuthStore } from "./app/store";
+
 export const listOfCountries = [
     { "id": 1, "name": "Afghanistan" },
     { "id": 2, "name": "Albania" },
@@ -204,6 +207,52 @@ export const paymentMethods = [
     { id: 4, name: "Net 21 days" },
 ];
 
+export const API_URL_V1 = process.env.NEXT_PUBLIC_API_URL
+
+
+
+export const axiosInstance = axios.create({
+    baseURL: API_URL_V1,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+
+axiosInstance.interceptors.request.use((config) => {
+    const accessToken = getAccessToken()
+
+    if (accessToken) {
+        console.log(accessToken);
+
+        config.headers.Authorization = `Bearer ${accessToken}`
+    }
+
+    return config
+
+})
+
+
+axiosInstance.interceptors.response.use((response) => {
+    return response
+},
+    async (error) => {
+        const originalRequest = error.config
+
+        const refreshToken = getRefreshToken();
+        //create a service that returns access token using the rrefresh token
+        const token = ""
+
+        if (error.response.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true
+            if (token) {
+                axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`
+                return axiosInstance(originalRequest)
+            }
+        }
+
+        return Promise.reject(error)
+    }
+)
 
 const lettersOfAlphabets = [
     "A",

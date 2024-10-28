@@ -13,6 +13,9 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
+      backgroundColor: {
+        "overlay-color": "rgba(124, 124, 125, 0.5)"
+      }
     },
   },
   plugins: [],
