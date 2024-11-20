@@ -5,6 +5,9 @@ import { FormProvider, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { LoginPayload, loginSchema } from "@/services/login/schema";
 import { useRouter } from "next/navigation";
+import { ClipLoader } from "react-spinners";
+import { useLogin } from "../hooks/useLogin";
+import { toast } from "sonner";
 
 type Props = {
   isModalActive: boolean;
@@ -22,9 +25,12 @@ const LoginForm = ({ isModalActive, setIsModalActive }: Props) => {
   });
   const { control, register, watch, reset } = methods;
   const router = useRouter();
-
+  const { login, isError, isLoading, isSuccess } = useLogin({
+    onSuccess: () => toast.success("User successfully logged in"),
+    onError: () => toast.error("Login failed"),
+  });
   const submitFormHandler = (values: LoginPayload) => {
-    console.log(values);
+    login(values);
   };
 
   return (
@@ -63,13 +69,17 @@ const LoginForm = ({ isModalActive, setIsModalActive }: Props) => {
           </button>
           <button
             type="submit"
+            disabled={isLoading}
             //   onClick={() => {
             //     deleteInvoiceHandler(selectedInvoice.id);
             //     router.push("/");
             //   }}
             className="text-xs p-4 md:px-6 py-4 capitalize rounded-3xl bg-[#9277FF] font-bold text-white"
           >
-            Contine
+            Continue
+            {isLoading && (
+              <ClipLoader className="ml-1" size={10} color="white" />
+            )}
           </button>
         </div>
         <p

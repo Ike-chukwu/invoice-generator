@@ -52,7 +52,7 @@ const ItemDetail = ({
           </label>
           <input
             {...register(`itemsList.${index}.itemQuantity`)}
-            type="text"
+            type="number"
             className="px-4 py-4 border-[0.1px] text-[10px] border-[#DFE3FA] w-full"
           />
         </div>
@@ -66,7 +66,7 @@ const ItemDetail = ({
           <input
             {...register(`itemsList.${index}.itemPrice`)}
             // name={`itemsList.${index}.itemPrice`}
-            type="text"
+            type="number"
             className="px-4 py-4 border-[0.1px] text-[10px] border-[#DFE3FA] w-full"
           />
         </div>
@@ -77,7 +77,10 @@ const ItemDetail = ({
           >
             total
           </label>
-          <p className="text-[12px]"> {watchedPrice * watchedQuantity}</p>
+          <p className="text-[12px]">
+            {" "}
+            {(watchedPrice ?? 0 )* (watchedQuantity ?? 0)}
+          </p>
         </div>
       </div>
       <div className="w-[5%] flex items-center justify-end">

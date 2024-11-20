@@ -9,6 +9,8 @@ type Props = {
   options: any;
   label: string;
   error: string | undefined;
+  valueKey?: string;
+  displayKey?: string;
 };
 
 const SelectField = ({
@@ -18,7 +20,25 @@ const SelectField = ({
   selectClassName,
   label,
   error,
+  valueKey = "id",
+  displayKey = "name",
 }: Props) => {
+  //return id as value of the select field
+  const getItemKey = (item: any) => {
+    if (typeof item == "string") {
+      return item;
+    }
+    return item[valueKey];
+  };
+
+  // return name as the value of the select field
+  const getValueKey = (item: any) => {
+    if (typeof item == "string") {
+      return item;
+    }
+    return item[displayKey];
+  };
+
   return (
     <>
       <label className={labelClassName}>{label}</label>
@@ -31,9 +51,9 @@ const SelectField = ({
             className={cn(selectClassName, error ? "border-red-500" : null)}
           >
             <option value="">Select {label}</option>
-            {options.map((option, index) => (
-              <option key={index} value={option.id}>
-                {option.name}
+            {options.map((item: any) => (
+              <option key={getItemKey(item)} value={getItemKey(item)}>
+                {getValueKey(item)}
               </option>
             ))}
           </select>

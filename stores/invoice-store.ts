@@ -12,15 +12,15 @@ export type Invoice = {
     streetAddressOfBusinessOwner: string;
     cityOfBusinessOwner: string;
     postCodeOfBusinessOwner: string;
-    countryOfBusinessOwner: string;
+    countryOfBusinessOwner: number;
     clientName: string;
     clientEmail: string;
     streetAddressOfClient: string;
     cityOfClient: string;
     postCodeOfOfClient: string;
-    countryOfClient: string;
+    countryOfClient: number;
     invoiceDate: string;
-    paymentTerms: string;
+    paymentTerms: number;
     projectDescription: string;
     dueDate: string;
     status: string
@@ -33,50 +33,6 @@ type invoiceStore = {
     changeInvoiceStatus: (id: string) => void
     deleteInvoice: (id: string) => void
 }
-
-type NavStore = {
-    isNavActive: boolean
-    toggleNav: () => void
-}
-
-
-type AuthStore = {
-    authInfo: {
-        accessToken: string
-        refreshToken: string
-        userId: string
-    },
-    setAuthInfo: (param: { accessToken?: string, refreshToken?: string, userId?: string }) => void
-}
-
-
-export const useAuthStore = create<AuthStore>((set) => ({
-    authInfo: {
-        accessToken: "",
-        refreshToken: "",
-        userId: "",
-    },
-    setAuthInfo: (param) => set((state) => {
-        return {
-            authInfo: {
-                accessToken: param.accessToken ?? state.authInfo.accessToken,
-                refreshToken: param.refreshToken ?? state.authInfo.refreshToken,
-                userId: param.userId ?? state.authInfo.userId,
-            }
-        }
-    })
-}))
-
-
-export const getAccessToken = () => useAuthStore.getState().authInfo.accessToken;
-export const getRefreshToken = () => useAuthStore.getState().authInfo.refreshToken;
-export const setAuthInfo = (authInfo: any) => useAuthStore.getState().setAuthInfo(authInfo);
-
-
-export const useNavStore = create<NavStore>((set) => ({
-    isNavActive: false,
-    toggleNav: () => set((state) => ({ isNavActive: !state.isNavActive })),
-}));
 
 
 export const useInvoiceStore = create<invoiceStore>((set) => ({

@@ -1,7 +1,7 @@
 import { ReactElement, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ComponentType } from "react";
-import { getAccessToken } from "@/app/store";
+import { getAccessToken } from "@/stores/auth-store";
 // import { userDataStore } from "../store/userdatastore";
 // const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 // import Loader from "../components/Loader.json";

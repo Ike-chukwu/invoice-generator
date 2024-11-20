@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAccessToken, getRefreshToken, useAuthStore } from "./app/store";
+import { getAccessToken, getRefreshToken } from "./stores/auth-store";
 
 export const listOfCountries = [
     { "id": 1, "name": "Afghanistan" },
@@ -222,9 +222,8 @@ axiosInstance.interceptors.request.use((config) => {
     const accessToken = getAccessToken()
 
     if (accessToken) {
-        console.log(accessToken);
-
-        config.headers.Authorization = `Bearer ${accessToken}`
+        // console.log(accessToken);
+        config.headers.Authorization = `Bearer ${accessToken}`;
     }
 
     return config

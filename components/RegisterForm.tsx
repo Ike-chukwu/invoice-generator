@@ -7,6 +7,7 @@ import { RegisterPayload, registerSchema } from "@/services/register/schema";
 import { useRegister } from "@/hooks/useRegister";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { ClipLoader } from "react-spinners";
 
 const RegisterForm = () => {
   const methods = useForm({
@@ -85,9 +86,13 @@ const RegisterForm = () => {
             // onClick={() => {
             //   setIsModalActive(false);
             // }}
+            disabled={isLoading}
             className="text-xs p-4 md:px-6 py-4 capitalize rounded-3xl bg-[#9277FF] font-bold text-white"
           >
-            Contine
+            Continue
+            {isLoading && (
+              <ClipLoader className="ml-1" size={10} color="white" />
+            )}
           </button>
         </div>
         <p

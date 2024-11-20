@@ -7,8 +7,10 @@ import SelectField from "./UI/Select";
 import ItemDetail from "./ItemDetail";
 import { listOfCountries, paymentMethods } from "@/constants";
 import { v4 as uuidv4 } from "uuid";
-import { Invoice, useInvoiceStore, useNavStore } from "@/app/store";
+// import { Invoice, useInvoiceStore, useNavStore } from "@/app/stores/store";
 import { addDays, generateCode } from "@/helper";
+import { useInvoiceStore } from "@/stores/invoice-store";
+import { useNavStore } from "@/stores/nav-store";
 
 type FormProps = {
   // isNavActive?: boolean;
@@ -91,11 +93,11 @@ const Form = ({
       cityOfClient: "",
       clientEmail: "",
       clientName: "",
-      countryOfBusinessOwner: "",
-      countryOfClient: "",
+      countryOfBusinessOwner: undefined,
+      countryOfClient: undefined,
       invoiceDate: "",
       itemsList: [],
-      paymentTerms: "",
+      paymentTerms: undefined,
       postCodeOfBusinessOwner: "",
       postCodeOfOfClient: "",
       projectDescription: "",
@@ -133,13 +135,13 @@ const Form = ({
     });
     let dueDate;
     const selectedPaymentTerm = values.paymentTerms;
-    if (parseInt(selectedPaymentTerm) === 1) {
+    if (selectedPaymentTerm === 1) {
       dueDate = addDays(values.invoiceDate, 1);
-    } else if (parseInt(selectedPaymentTerm) === 2) {
+    } else if (selectedPaymentTerm === 2) {
       dueDate = addDays(values.invoiceDate, 7);
-    } else if (parseInt(selectedPaymentTerm) === 3) {
+    } else if (selectedPaymentTerm === 3) {
       dueDate = addDays(values.invoiceDate, 14);
-    } else if (parseInt(selectedPaymentTerm) === 4) {
+    } else if (selectedPaymentTerm === 4) {
       dueDate = addDays(values.invoiceDate, 21);
     }
     if (dueDate) {

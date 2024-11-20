@@ -3,12 +3,16 @@ import { ArrowLeftIcon } from "@/components/icons";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useInvoiceStore, useNavStore } from "@/app/store";
+
 import Form from "@/components/Form";
 import { addDays } from "@/helper";
 import { invoicePayload } from "@/types/schema";
 import Modal from "@/components/UI/Modal";
 import WithAuth from "@/components/ProtectedRoute";
+import { useInvoiceStore } from "@/stores/invoice-store";
+import { useNavStore } from "@/stores/nav-store";
+import { useEditInvoice, useGetInvoiceById } from "@/hooks/useInvoice";
+import { toast } from "sonner";
 
 type InvoiceType = {
   id: string;
@@ -24,15 +28,15 @@ type InvoiceType = {
   streetAddressOfBusinessOwner: string;
   cityOfBusinessOwner: string;
   postCodeOfBusinessOwner: string;
-  countryOfBusinessOwner: string;
+  countryOfBusinessOwner: number;
   clientName: string;
   clientEmail: string;
   streetAddressOfClient: string;
   cityOfClient: string;
   postCodeOfOfClient: string;
-  countryOfClient: string;
+  countryOfClient: number;
   invoiceDate: string;
-  paymentTerms: string;
+  paymentTerms: number;
   projectDescription: string;
   dueDate: string;
   status: string;
@@ -40,18 +44,22 @@ type InvoiceType = {
 
 const ReceiptPage = () => {
   const { id } = useParams();
+  const {
+    invoice,
+    isLoading: isInvoiceLoading,
+    isSuccess,
+    isError,
+  } = useGetInvoiceById(id.toString() || "");
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceType>();
   const listOfInvoicesFromStore = useInvoiceStore(
     (state) => state.listOfInvoices
   );
   const router = useRouter();
   const [isDeleteModalActive, setIsDeleteModalActive] = useState(false);
-
   const changeInvoiceStatusHandler = useInvoiceStore(
     (state) => state.changeInvoiceStatus
   );
   const deleteInvoiceHandler = useInvoiceStore((state) => state.deleteInvoice);
-
   const changeStatusHandler = () => {
     let selectedInvoiceCopy;
     if (selectedInvoice) {
@@ -66,7 +74,16 @@ const ReceiptPage = () => {
   const isNavActive = useNavStore((state) => state.isNavActive);
   const toggleNav = useNavStore((state) => state.toggleNav);
   const editInvoiceHandler = useInvoiceStore((state) => state.editInvoice);
-
+  const {
+    editInvoice,
+    isError: isEditError,
+    isPending,
+    isSuccess: isEditSuccess,
+  } = useEditInvoice({
+    onSuccess: () => toast.success("Invoice has been edited successfully"),
+    onError: () => toast.error("Invoice could not be edited"),
+    id: id.toString(),
+  });
   const onSubmit = (values: invoicePayload) => {
     // const randomCode = generateCode();
     const formatedItemsList = values.itemsList?.map((item) => {
@@ -77,15 +94,16 @@ const ReceiptPage = () => {
     });
     let dueDate;
     const selectedPaymentTerm = values.paymentTerms;
-    if (parseInt(selectedPaymentTerm) === 1) {
-      dueDate = addDays(values.invoiceDate, 1);
-    } else if (parseInt(selectedPaymentTerm) === 2) {
-      dueDate = addDays(values.invoiceDate, 7);
-    } else if (parseInt(selectedPaymentTerm) === 3) {
-      dueDate = addDays(values.invoiceDate, 14);
-    } else if (parseInt(selectedPaymentTerm) === 4) {
-      dueDate = addDays(values.invoiceDate, 21);
-    }
+    dueDate = addDays(values.invoiceDate, selectedPaymentTerm);
+    // if (selectedPaymentTerm === 1) {
+    //   dueDate = addDays(values.invoiceDate, 1);
+    // } else if (selectedPaymentTerm === 2) {
+    //   dueDate = addDays(values.invoiceDate, 7);
+    // } else if (selectedPaymentTerm === 3) {
+    //   dueDate = addDays(values.invoiceDate, 14);
+    // } else if (selectedPaymentTerm === 4) {
+    //   dueDate = addDays(values.invoiceDate, 21);
+    // }
     if (dueDate) {
       const date = new Date(dueDate);
 
@@ -100,7 +118,8 @@ const ReceiptPage = () => {
       id: selectedInvoice?.id,
       code: selectedInvoice?.code,
       ...values,
-      dueDate,
+      invoiceDate: values.invoiceDate,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       itemsList: formatedItemsList,
       status: selectedInvoice?.status,
     });
@@ -111,6 +130,15 @@ const ReceiptPage = () => {
       dueDate: dueDate ?? "",
       itemsList: formatedItemsList,
       status: selectedInvoice?.status ?? "",
+    });
+    editInvoice({
+      _id: id.toString(),
+      code: invoice?.code,
+      ...values,
+      invoiceDate: values.invoiceDate,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      itemsList: formatedItemsList,
+      status: "pending",
     });
     // setListOfFormData([
     //   ...listOfFormData,
@@ -128,16 +156,19 @@ const ReceiptPage = () => {
     // reset();
   };
 
+  // useEffect(() => {
+  //   const foundInvoice = listOfInvoicesFromStore.find(
+  //     (invoice) => invoice.id == id
+  //   );
+  //   if (invoice) {
+  //     setSelectedInvoice(foundInvoice);
+  //   }
+  // }, [invoice, id]);
   useEffect(() => {
-    const foundInvoice = listOfInvoicesFromStore.find(
-      (invoice) => invoice.id == id
-    );
-    if (foundInvoice) {
-      setSelectedInvoice(foundInvoice);
-    }
-  }, [id]);
+    console.log(invoice);
+  }, [invoice]);
 
-  if (!selectedInvoice) return <div>Loading</div>;
+  if (isInvoiceLoading) return <div>Loading</div>;
 
   return (
     <>
@@ -154,22 +185,22 @@ const ReceiptPage = () => {
                 <span className="text-xs capitalize text-[#888EAF]">
                   status
                 </span>
-                {selectedInvoice.status == "paid" && (
+                {invoice?.status == "paid" && (
                   <div className="text-green-400 justify-center w-[5rem] py-2 text-[12px] bg-[#F5FDFA] flex gap-2 items-center text-bold rounded-md capitalize">
                     <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                    <span>{selectedInvoice.status}</span>
+                    <span>{invoice?.status}</span>
                   </div>
                 )}
-                {selectedInvoice.status == "pending" && (
+                {invoice?.status == "pending" && (
                   <div className="text-[#FF8F00] justify-center w-[5rem] py-2 text-[12px] bg-[#FFF9F2] flex gap-2 items-center text-bold rounded-md capitalize">
                     <div className="w-2 h-2 rounded-full bg-[#FF8F00]"></div>
-                    <span>{selectedInvoice.status}</span>
+                    <span>{invoice?.status}</span>
                   </div>
                 )}
-                {selectedInvoice.status == "draft" && (
+                {invoice?.status == "draft" && (
                   <div className="text-[#373B53] justify-center w-[5rem] py-2 text-[12px] bg-[#F5F5F6] flex gap-2 items-center text-bold rounded-md capitalize">
                     <div className="w-2 h-2 rounded-full bg-[#373B53]"></div>
-                    <span>{selectedInvoice.status}</span>
+                    <span>{invoice?.status}</span>
                   </div>
                 )}
               </div>
@@ -202,24 +233,24 @@ const ReceiptPage = () => {
               <div className="flex flex-col md:flex-row justify-between md:items-center w-full">
                 <div className="">
                   <p className="uppercase text-[14px] md:text-[16px] mb-2 text-[#0C0E16] font-bold">
-                    {selectedInvoice.code}
+                    {invoice?.code}
                   </p>
                   <span className="text-[12px] md:text-[14px] capitalize text-[#888EAF]">
-                    {selectedInvoice.projectDescription}
+                    {invoice?.projectDescription}
                   </span>
                 </div>
                 <div className="mt-6 md:mt-auto">
                   <p className="text-[12px] md:text-[14px] mb-1 capitalize text-[#888EAF]">
-                    {selectedInvoice.streetAddressOfBusinessOwner},
+                    {invoice?.streetAddressOfBusinessOwner},
                   </p>
                   <p className="text-[12px] md:text-[14px] mb-1 capitalize text-[#888EAF]">
-                    {selectedInvoice.cityOfBusinessOwner},
+                    {invoice?.cityOfBusinessOwner},
                   </p>
                   <p className="text-[12px] md:text-[14px] capitalize text-[#888EAF]">
-                    {selectedInvoice.postCodeOfBusinessOwner}
+                    {invoice?.postCodeOfBusinessOwner}
                   </p>
                   <p className="text-[12px] md:text-[14px] capitalize text-[#888EAF]">
-                    {selectedInvoice.countryOfBusinessOwner}
+                    {invoice?.countryOfBusinessOwner}
                   </p>
                 </div>
               </div>
@@ -230,7 +261,15 @@ const ReceiptPage = () => {
                       Invoice Date
                     </p>
                     <p className="text-[14px] md:text-lg font-bold">
-                      {selectedInvoice.invoiceDate}
+                      {invoice?.invoiceDate &&
+                        new Date(invoice.invoiceDate).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "2-digit",
+                          }
+                        )}
                     </p>
                   </div>
                   <div className="">
@@ -238,7 +277,17 @@ const ReceiptPage = () => {
                       Payment Due
                     </p>
                     <p className="text-[14px] md:text-lg font-bold">
-                      {selectedInvoice.dueDate}
+                      {invoice?.invoiceDate &&
+                        new Date(
+                          addDays(
+                            invoice.invoiceDate,
+                            parseInt(invoice.paymentTerms)
+                          )
+                        ).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                        })}
                     </p>
                   </div>
                 </div>
@@ -248,21 +297,21 @@ const ReceiptPage = () => {
                       bill to
                     </p>
                     <p className="text-[14px] md:text-lg font-bold">
-                      {selectedInvoice.clientName}
+                      {invoice?.clientName}
                     </p>
                   </div>
                   <div className="flex flex-col items-start ">
                     <p className="text-[12px] md:text-[14px] mb-1 capitalize text-[#888EAF]">
-                      {selectedInvoice.streetAddressOfClient}
+                      {invoice?.streetAddressOfClient}
                     </p>
                     <p className="text-[12px] md:text-[14px] mb-1 capitalize text-[#888EAF]">
-                      {selectedInvoice.cityOfClient}
+                      {invoice?.cityOfClient}
                     </p>
                     <p className="text-[12px] md:text-[14px] mb-1 capitalize text-[#888EAF]">
-                      {selectedInvoice.postCodeOfOfClient}
+                      {invoice?.postCodeOfOfClient}
                     </p>
                     <p className="text-[12px] md:text-[14px] capitalize text-[#888EAF]">
-                      {selectedInvoice.countryOfClient}
+                      {invoice?.countryOfClient}
                     </p>
                   </div>
                 </div>
@@ -271,7 +320,7 @@ const ReceiptPage = () => {
                     sent to
                   </p>
                   <p className="text-[14px] md:text-lg font-bold">
-                    {selectedInvoice.clientEmail}
+                    {invoice?.clientEmail}
                   </p>
                 </div>
               </div>
@@ -280,26 +329,11 @@ const ReceiptPage = () => {
                   sent to
                 </p>
                 <p className="text-[14px] md:text-lg font-bold">
-                  {selectedInvoice.clientEmail}
+                  {invoice?.clientEmail}
                 </p>
               </div>
               <div className="">
-                {/* <div className="flex justify-between items-center w-full px-8 py-10 bg-[#F9FAFE] rounded-tl-md rounded-tr-md">
-                <p className="text-[14px] font-bold">Website Redesign</p>
-                <p className="text-[14px] font-bold">1x £14002.33</p>
-              </div> */}
-                {/* <div className="grid grid-cols-4 w-full gap-6 px-8 py-10 bg-[#F9FAFE] rounded-tl-md rounded-tr-md">
-                <p className="text-[13px] text-[#888EAF]">Item Name</p>
-                <p className="text-[13px]  text-[#888EAF]">QTY.</p>
-                <p className="text-[13px] text-[#888EAF]">Price</p>
-                <p className="text-[13px] text-[#888EAF]">Total</p>
-                <p className="text-[14px] font-bold">Brand Guidelines</p>
-                <p className="text-[14px] font-bold">1</p>
-                <p className="text-[14px] font-bold">$1800.9</p>
-                <p className="text-[14px] font-bold">$1800.9</p>
-              </div> */}
                 <div className="hidden md:grid grid-cols-4 w-full gap-6 px-4 md:px-8 py-10 bg-[#F9FAFE] rounded-tl-md rounded-tr-md">
-                  {/* <div className="w-full hidden  md:flex justify-between"> */}
                   <p className="text-[13px] hidden md:block text-[#888EAF]">
                     Item Name
                   </p>
@@ -312,8 +346,7 @@ const ReceiptPage = () => {
                   <p className="text-[13px] text-right hidden md:block text-[#888EAF]">
                     Total
                   </p>
-                  {/* </div> */}
-                  {selectedInvoice?.itemsList?.map((item) => (
+                  {invoice?.itemsList?.map((item) => (
                     <>
                       {/* <div className="w-full item flex-col md:flex-row gap-2 flex  md: justify-between"> */}
                       <p className="text-[13px] hidden md:block md:text-[14px] font-bold">
@@ -330,13 +363,16 @@ const ReceiptPage = () => {
                       </p>
 
                       <p className="text-[13px] hidden md:block md:text-[14px] text-right font-bold">
-                        ${item.total}.00
+                        $
+                        {`${
+                          (item.itemQuantity ?? 0) * (item.itemPrice ?? 0)
+                        }.00`}
                       </p>
                     </>
                   ))}
                 </div>
                 <div className="md:hidden flex flex-col gap-6 px-4 md:px-8 py-10 bg-[#F9FAFE] w-full ">
-                  {selectedInvoice.itemsList?.map((item) => (
+                  {invoice?.itemsList?.map((item) => (
                     <div className="flex justify-between items-center ">
                       <div className="flex flex-col  items-start md:hidden  ">
                         <p className="text-[13px] md:text-[14px] font-bold">
@@ -355,7 +391,10 @@ const ReceiptPage = () => {
                         </div>
                       </div>
                       <p className="text-[13px] block md:hidden md:text-[14px] text-right font-bold">
-                        ${item.total}.00
+                        $
+                        {`${
+                          (item.itemQuantity ?? 0) * (item.itemPrice ?? 0)
+                        }.00`}
                       </p>
                     </div>
                   ))}
@@ -364,8 +403,10 @@ const ReceiptPage = () => {
                   <p className="text-[14px]">Amount Due</p>
                   <p className="text-2xl font-bold">
                     $
-                    {selectedInvoice.itemsList?.reduce((acc, item) => {
-                      return item.total + acc;
+                    {invoice?.itemsList?.reduce((acc, item) => {
+                      return (
+                        (item?.itemQuantity ?? 0) * (item?.itemPrice ?? 0) + acc
+                      );
                     }, 0)}
                     .00
                   </p>
@@ -375,27 +416,6 @@ const ReceiptPage = () => {
           </div>
 
           <div className="absolute  md:hidden bottom-0 bg-white rounded-lg py-6 px-4 md:px-6 w-full flex justify-between items-center">
-            {/* <div className="hidden md:flex gap-4 items-center">
-              <span className="text-xs capitalize text-[#888EAF]">status</span>
-              {selectedInvoice.status == "paid" && (
-                <div className="text-green-400 px-7 py-2 text-[12px] bg-[#F5FDFA] flex gap-2 items-center text-bold rounded-md capitalize">
-                  <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                  <span>Paid</span>
-                </div>
-              )}
-              {selectedInvoice.status == "pending" && (
-                <div className="text-[#FF8F00] px-7 py-2 text-[12px] bg-[#FFF9F2] flex gap-2 items-center text-bold rounded-md capitalize">
-                  <div className="w-2 h-2 rounded-full bg-[#FF8F00]"></div>
-                  <span>Pending</span>
-                </div>
-              )}
-              {selectedInvoice.status == "draft" && (
-                <div className="text-[#373B53] px-7 py-2 text-[12px] bg-[#F5F5F6] flex gap-2 items-center text-bold rounded-md capitalize">
-                  <div className="w-2 h-2 rounded-full bg-[#373B53]"></div>
-                  <span>Draft</span>
-                </div>
-              )}
-            </div> */}
             <div className="w-full md:w-auto justify-between md:justify-normal flex gap-2 items-center">
               <button
                 onClick={toggleNav}
@@ -445,7 +465,7 @@ const ReceiptPage = () => {
             Confirm Deletion
           </h2>
           <p className="text-[12px] md:text-[14px] text-[#000000]">
-            {`Are you sure you want to delete invoice ${selectedInvoice.code}? This action cannot
+            {`Are you sure you want to delete invoice ${invoice?.code}? This action cannot
             be undone.`}
           </p>
           <div className="self-end flex gap-2">
@@ -459,7 +479,7 @@ const ReceiptPage = () => {
             </button>
             <button
               onClick={() => {
-                deleteInvoiceHandler(selectedInvoice.id);
+                // deleteInvoiceHandler(selectedInvoice.id);
                 router.push("/");
               }}
               className="text-xs p-4 md:px-6 py-4 capitalize rounded-3xl bg-red-500 font-bold text-white"
@@ -469,49 +489,7 @@ const ReceiptPage = () => {
           </div>
         </div>
       </Modal>
-      {/* <div
-        className={
-          "transition-colors duration-300 fixed inset-0  w-full z-20  flex items-center justify-center " +
-          (isDeleteModalActive ? "visible bg-overlay-color" : "invisible")
-        }
-      >
-        <div
-          className={
-            "bg-white rounded-lg transition-all duration-800 ease-in flex-col z-50 w-[280px]  md:w-[400px] p-7 lg:p-10 flex gap-4 items-start " +
-            (isDeleteModalActive
-              ? "translate-y-0 opacity-100 "
-              : "translate-y-[200px] opacity-0")
-          }
-        >
-          <h2 className="text-[14px] md:text-[20px] font-bold">
-            Confirm Deletion
-          </h2>
-          <p className="text-[12px] md:text-[14px] text-[#000000]">
-            {`Are you sure you want to delete invoice ${selectedInvoice.code}? This action cannot
-            be undone.`}
-          </p>
-          <div className="self-end flex gap-2">
-            <button
-              onClick={() => {
-                setIsDeleteModalActive(false);
-              }}
-              className="text-xs p-4 md:px-6 py-4  capitalize rounded-3xl text-[#7E88C3] bg-[#f9fafe] hover:bg-[#DFE3FA]"
-            >
-              cancel
-            </button>
-            <button
-              onClick={() => {
-                deleteInvoiceHandler(selectedInvoice.id);
-                router.push("/");
-              }}
-              className="text-xs p-4 md:px-6 py-4 capitalize rounded-3xl bg-red-500 font-bold text-white"
-            >
-              delete
-            </button>
-          </div>
-        </div>
-      </div> */}
-      <Form invoice={selectedInvoice} submitFormHandler={onSubmit} />
+      <Form invoice={invoice} submitFormHandler={onSubmit} />
     </>
   );
 };
