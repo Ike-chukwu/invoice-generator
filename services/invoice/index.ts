@@ -28,4 +28,12 @@ export class InvoiceService {
     public static editInvoice(editedInvoice: any) {
         return axiosInstance.patch(this.INVOICE_URL, { editedInvoice })
     }
+
+    public static changeInvoiceStatus(editedInvoice: any) {
+        return axiosInstance.patch(`/editInvoiceStatus`, { editedInvoice })
+    }
+
+    public static deleteInvoice(id: string) {
+        return axiosInstance.delete(this.INVOICE_URL, { params: { id } })
+    }
 }

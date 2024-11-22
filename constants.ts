@@ -225,7 +225,6 @@ axiosInstance.interceptors.request.use((config) => {
         // console.log(accessToken);
         config.headers.Authorization = `Bearer ${accessToken}`;
     }
-
     return config
 
 })

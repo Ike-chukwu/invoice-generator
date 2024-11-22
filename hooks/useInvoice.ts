@@ -83,3 +83,56 @@ export const useGetInvoiceById = (id: string) => {
         isSuccess
     }
 }
+
+
+export const useChangeInvoiceStatus = ({ onSuccess, onError, id }: { onSuccess: () => void, onError: () => void, id: string }) => {
+    const queryClient = useQueryClient()
+    const { mutate, isPending, isError, isSuccess } = useMutation({
+        mutationFn: (variables: any) => InvoiceService.changeInvoiceStatus(variables),
+        mutationKey: ["changeInvoiceStatus"],
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["fetchListOfInvoices"] })
+            queryClient.refetchQueries({ queryKey: ["fetchListOfInvoices"] });
+            queryClient.invalidateQueries({ queryKey: ["getInvoiceById", id] })
+            onSuccess?.()
+        },
+        onError: () => {
+            onError?.()
+        }
+    })
+
+
+    return {
+        changeInvoiceStatus: mutate,
+        isPending,
+        isError,
+        isSuccess
+    }
+}
+
+
+export const useDeleteInvoice = ({ onSuccess, onError }: { onSuccess: () => void, onError: () => void, }) => {
+    const queryClient = useQueryClient()
+    const { mutate, isError, isSuccess, isPending } = useMutation({
+        mutationFn: (id: string) => InvoiceService.deleteInvoice(id),
+        mutationKey: ["deleteInvoice"],
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["fetchListOfInvoices"] })
+            queryClient.refetchQueries({ queryKey: ["fetchListOfInvoices"] });
+            onSuccess?.()
+        },
+        onError: () => {
+            queryClient.invalidateQueries({ queryKey: ["fetchListOfInvoices"] })
+            queryClient.refetchQueries({ queryKey: ["fetchListOfInvoices"] });
+            onError?.()
+        }
+    })
+
+    return {
+        deleteInvoice: mutate,
+        isError,
+        isPending,
+        isSuccess
+    }
+
+}

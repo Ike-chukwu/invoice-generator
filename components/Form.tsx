@@ -11,68 +11,10 @@ import { v4 as uuidv4 } from "uuid";
 import { addDays, generateCode } from "@/helper";
 import { useInvoiceStore } from "@/stores/invoice-store";
 import { useNavStore } from "@/stores/nav-store";
+import { useCreateInvoice } from "@/hooks/useInvoice";
+import { toast } from "sonner";
 
 type FormProps = {
-  // isNavActive?: boolean;
-  // toggleNav?: Dispatch<SetStateAction<boolean>>;
-  // listOfFormData?: Array<{
-  //   id: string;
-  //   code: string;
-  //   itemsList?:
-  //     | {
-  //         itemQuantity?: number | undefined;
-  //         itemPrice?: number | undefined;
-  //         itemName: string;
-  //         total: number;
-  //       }[]
-  //     | undefined;
-  //   streetAddressOfBusinessOwner: string;
-  //   cityOfBusinessOwner: string;
-  //   postCodeOfBusinessOwner: string;
-  //   countryOfBusinessOwner: string;
-  //   clientName: string;
-  //   clientEmail: string;
-  //   streetAddressOfClient: string;
-  //   cityOfClient: string;
-  //   postCodeOfOfClient: string;
-  //   countryOfClient: string;
-  //   invoiceDate: string;
-  //   paymentTerms: string;
-  //   projectDescription: string;
-  //   dueDate: string;
-  //   status: string;
-  // }>;
-  // setListOfFormData?: Dispatch<
-  //   SetStateAction<
-  //     {
-  //       id: string;
-  //       code: string;
-  //       itemsList?:
-  //         | {
-  //             itemQuantity?: number | undefined;
-  //             itemPrice?: number | undefined;
-  //             itemName: string;
-  //             total: number;
-  //           }[]
-  //         | undefined;
-  //       streetAddressOfBusinessOwner: string;
-  //       cityOfBusinessOwner: string;
-  //       postCodeOfBusinessOwner: string;
-  //       countryOfBusinessOwner: string;
-  //       clientName: string;
-  //       clientEmail: string;
-  //       streetAddressOfClient: string;
-  //       cityOfClient: string;
-  //       postCodeOfOfClient: string;
-  //       countryOfClient: string;
-  //       invoiceDate: string;
-  //       paymentTerms: string;
-  //       projectDescription: string;
-  //       dueDate: string;
-  //       status: string;
-  //     }[]
-  //   >
-  // >;
   invoice?: any;
   submitFormHandler: (invoice: invoicePayload) => void;
 };
@@ -105,9 +47,7 @@ const Form = ({
       streetAddressOfClient: "",
     },
   });
-  const listOfInvoicesFromStore = useInvoiceStore(
-    (state) => state.listOfInvoices
-  );
+
   const { control, register, watch, reset } = methods;
   const {
     fields: listOfItems,
@@ -118,9 +58,10 @@ const Form = ({
     name: "itemsList",
   });
 
-  const addInvoiceHandlerFromStore = useInvoiceStore(
-    (state) => state.addInvoice
-  );
+  const { createInvoice, isError, isPending, isSuccess } = useCreateInvoice({
+    onSuccess: () => toast.success("Invoice successfully created"),
+    onError: () => toast.error("Invoice cannot be created"),
+  });
 
   const isNavActive = useNavStore((state) => state.isNavActive);
   const toggleNav = useNavStore((state) => state.toggleNav);
@@ -135,15 +76,7 @@ const Form = ({
     });
     let dueDate;
     const selectedPaymentTerm = values.paymentTerms;
-    if (selectedPaymentTerm === 1) {
-      dueDate = addDays(values.invoiceDate, 1);
-    } else if (selectedPaymentTerm === 2) {
-      dueDate = addDays(values.invoiceDate, 7);
-    } else if (selectedPaymentTerm === 3) {
-      dueDate = addDays(values.invoiceDate, 14);
-    } else if (selectedPaymentTerm === 4) {
-      dueDate = addDays(values.invoiceDate, 21);
-    }
+    dueDate = addDays(values.invoiceDate, selectedPaymentTerm);
     if (dueDate) {
       const date = new Date(dueDate);
 
@@ -154,32 +87,17 @@ const Form = ({
       };
       dueDate = date.toLocaleDateString("en-US", options);
     }
-
-    addInvoiceHandlerFromStore({
+    createInvoice({
       id: uuidv4(),
       code: randomCode,
       ...values,
-      dueDate,
+      invoiceDate: values.invoiceDate,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       itemsList: formatedItemsList,
       status: "draft",
     });
     toggleNav();
     reset();
-
-    // setListOfFormData([
-    //   ...listOfFormData,
-
-    //   {
-    //     id: uuidv4(),
-    //     code: randomCode,
-    //     ...values,
-    //     dueDate,
-    //     itemsList: formatedItemsList,
-    //     status: "Draft",
-    //   },
-    // ]);
-
-    // reset();
   };
 
   useEffect(() => {

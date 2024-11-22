@@ -11,7 +11,12 @@ import Modal from "@/components/UI/Modal";
 import WithAuth from "@/components/ProtectedRoute";
 import { useInvoiceStore } from "@/stores/invoice-store";
 import { useNavStore } from "@/stores/nav-store";
-import { useEditInvoice, useGetInvoiceById } from "@/hooks/useInvoice";
+import {
+  useChangeInvoiceStatus,
+  useDeleteInvoice,
+  useEditInvoice,
+  useGetInvoiceById,
+} from "@/hooks/useInvoice";
 import { toast } from "sonner";
 
 type InvoiceType = {
@@ -60,16 +65,6 @@ const ReceiptPage = () => {
     (state) => state.changeInvoiceStatus
   );
   const deleteInvoiceHandler = useInvoiceStore((state) => state.deleteInvoice);
-  const changeStatusHandler = () => {
-    let selectedInvoiceCopy;
-    if (selectedInvoice) {
-      selectedInvoiceCopy = { ...selectedInvoice };
-      selectedInvoiceCopy.status = "paid";
-    }
-    const selectedId = selectedInvoice?.id;
-    setSelectedInvoice(selectedInvoiceCopy);
-    if (selectedId) changeInvoiceStatusHandler(selectedId);
-  };
 
   const isNavActive = useNavStore((state) => state.isNavActive);
   const toggleNav = useNavStore((state) => state.toggleNav);
@@ -84,6 +79,40 @@ const ReceiptPage = () => {
     onError: () => toast.error("Invoice could not be edited"),
     id: id.toString(),
   });
+  const {
+    changeInvoiceStatus,
+    isError: isInvoiceStatusError,
+    isPending: isInvoiceStatusLoading,
+    isSuccess: isInvoiceStatusChangeSuccess,
+  } = useChangeInvoiceStatus({
+    onSuccess: () => toast.success("Invoice status successfully updated"),
+    onError: () => toast.error("Invoice status update failed"),
+    id: id.toString(),
+  });
+  const {
+    deleteInvoice,
+    isError: isDeleteInvoiceError,
+    isPending: isDeletePending,
+    isSuccess: isDeleteSuccess,
+  } = useDeleteInvoice({
+    onSuccess: () => toast.success("Invoice successfully deleted"),
+    onError: () => toast.error("Invoice failed to delete"),
+  });
+
+  const changeStatusHandler = () => {
+    // let selectedInvoiceCopy;
+    // if (selectedInvoice) {
+    //   selectedInvoiceCopy = { ...selectedInvoice };
+    //   selectedInvoiceCopy.status = "paid";
+    // }
+    // const selectedId = selectedInvoice?.id;
+    // setSelectedInvoice(selectedInvoiceCopy);
+    // if (selectedId) changeInvoiceStatusHandler(selectedId);
+    changeInvoiceStatus({
+      ...invoice,
+      status: "paid",
+    });
+  };
   const onSubmit = (values: invoicePayload) => {
     // const randomCode = generateCode();
     const formatedItemsList = values.itemsList?.map((item) => {
@@ -138,7 +167,7 @@ const ReceiptPage = () => {
       invoiceDate: values.invoiceDate,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       itemsList: formatedItemsList,
-      status: "pending",
+      status: invoice?.status,
     });
     // setListOfFormData([
     //   ...listOfFormData,
@@ -214,7 +243,6 @@ const ReceiptPage = () => {
                 <button
                   onClick={() => {
                     // console.log("yes");
-
                     setIsDeleteModalActive(true);
                   }}
                   className="text-xs p-4 md:px-6 py-4 capitalize rounded-3xl bg-red-500 font-bold text-white"
@@ -222,10 +250,16 @@ const ReceiptPage = () => {
                   delete
                 </button>
                 <button
-                  className="text-xs p-4 md:px-6 py-4 rounded-3xl font-bold bg-[#7c5dfa] opacity-50 text-white"
+                  className={
+                    "text-xs p-4 md:px-6 py-4 bg-[#7c5dfa] rounded-3xl font-bold text-white " +
+                    (invoice?.status == "paid" ? "opacity-45" : "opacity-100")
+                  }
                   onClick={changeStatusHandler}
+                  disabled={
+                    invoice?.status == "paid" || isInvoiceStatusChangeSuccess
+                  }
                 >
-                  Mark as Paid
+                  {isInvoiceStatusLoading ? "Please wait..." : " Mark as Paid"}
                 </button>
               </div>
             </div>
@@ -433,9 +467,15 @@ const ReceiptPage = () => {
               </button>
               <button
                 onClick={changeStatusHandler}
-                className="text-xs p-4 md:px-6 py-4 rounded-3xl font-bold bg-[#E5DFFE] text-white"
+                disabled={
+                  invoice?.status == "paid" || isInvoiceStatusChangeSuccess
+                }
+                className={
+                  "text-xs p-4 md:px-6 py-4 rounded-3xl font-bold bg-[#7c5dfa] text-white " +
+                  (invoice?.status == "paid" ? "opacity-50" : "opacity-100")
+                }
               >
-                Mark as Paid
+                {isInvoiceStatusLoading ? "Please wait..." : " Mark as Paid"}
               </button>
             </div>
           </div>
@@ -480,6 +520,7 @@ const ReceiptPage = () => {
             <button
               onClick={() => {
                 // deleteInvoiceHandler(selectedInvoice.id);
+                deleteInvoice(id.toString());
                 router.push("/");
               }}
               className="text-xs p-4 md:px-6 py-4 capitalize rounded-3xl bg-red-500 font-bold text-white"
